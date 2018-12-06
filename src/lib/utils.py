@@ -1,8 +1,8 @@
 from lib import memory
 import numpy as np 
 
-def collectEpisodes(env, brainName, policy, tMax=200, gamma=1):
-    '''collect one set of episodes form the set of learners
+def collectEpisodes(env, brainName, policy, tMax=200, gamma=1, train_mode=True):
+    '''collect one set of 20 episodes form the set of learners
     
     [description]
     
@@ -25,7 +25,7 @@ def collectEpisodes(env, brainName, policy, tMax=200, gamma=1):
         [description]
     '''
 
-    env_info = env.reset(train_mode=True)[brainName] 
+    env_info = env.reset(train_mode=train_mode)[brainName] 
     nAgents = len(env_info.agents)
 
     episodes = []
@@ -36,7 +36,6 @@ def collectEpisodes(env, brainName, policy, tMax=200, gamma=1):
 
     states = env_info.vector_observations
     scores = np.zeros(nAgents)
-
 
     for t in range(tMax):
 
@@ -59,16 +58,14 @@ def collectEpisodes(env, brainName, policy, tMax=200, gamma=1):
 
     return episodes
 
-def updateReplayBuffer(buffer, env, brainName, policy, maxBuffer = 200, tMax = 200, gamma=1):
+def updateReplayBuffer(buffer, env, brainName, policy, tMax = 200, gamma=1, numDelete=10):
 
     # We are expecting a ReplayBuffer over here ...
 
+    buffer.deleteNEpisodes(numDelete)
     episodes = collectEpisodes(env, brainName, policy, tMax=tMax, gamma=gamma)
     for e in episodes:
         buffer.append(e)
-        
-    buffer.deleteNEpisodes(10)
-
 
     return buffer
 

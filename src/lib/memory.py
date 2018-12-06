@@ -1,6 +1,8 @@
 from collections import deque, namedtuple
 import numpy as np 
 
+
+
 class Episode:
 
     def __init__(self, maxLen, nSamples, nSteps=1, gamma=1):
@@ -109,7 +111,7 @@ class ReplayBuffer:
             results += episode.sample(nEpSamples)
 
         # Sampling depends upon the score ...
-        episodeSum = np.array([r[2] for r in results])
+        episodeSum = np.array([r[2] for r in results]) + 1e-5
         episodeSum = episodeSum/episodeSum.sum()
 
         pos     = np.random.choice(range(len(results)), nSamples, replace=False, p=episodeSum)

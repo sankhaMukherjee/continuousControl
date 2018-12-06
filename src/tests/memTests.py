@@ -17,7 +17,7 @@ def testMemoryBuffers():
 
     memBuffer = memory.ReplayBuffer(100)
     for i in tqdm(range(50)):
-        memBuffer = utils.updateReplayBuffer(memBuffer, env, brain_name, policy, maxBuffer = 200, tMax = 200, gamma=1)
+        memBuffer = utils.updateReplayBuffer(memBuffer, env, brain_name, policy, tMax = 200, gamma=1)
 
     print('Total size of the memorey: {}'.format(len(memBuffer.memory)))
     for i, m in enumerate(memBuffer.memory):
