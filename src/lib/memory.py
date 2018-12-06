@@ -65,7 +65,7 @@ class Episode:
                     cum_reward = sum(nr[:nSteps])
                     ns = ns[ nSteps - 1 ]
                 except Exception as e:
-                    print('Error: {}'.format(e))
+                    #print('Error: {}'.format(e))
                     ns         = self.memory[i].next_state 
                     cum_reward = 0
                 

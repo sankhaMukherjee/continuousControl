@@ -60,7 +60,7 @@ class Critic(nn.Module):
     def forward(self, state, action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         xs = F.relu(self.fcs1(state))
-        x = torch.cat((xs, action), dim=1)
+        x = torch.cat((xs, action))
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
@@ -70,15 +70,19 @@ class Agent:
 
         self.config = json.load(open('config.json'))['Agent']
 
+        self.lrDec = self.config['lrDec']
+
         # Generates the right action ...
-        self.actor1 = Actor( **self.config['actor'] ).to(device)
-        self.actor2 = Actor( **self.config['actor'] ).to(device)
+        self.actor1 = Actor( **self.config['actor'] ).to(device) # short term
+        self.actor2 = Actor( **self.config['actor'] ).to(device) # long term
         self.actOptimizer = optim.Adam( self.actor1.parameters(), lr=self.config['actorLR'] )
+        self.currLRActor = self.config['actorLR']
 
         # Generates the right policy ...
-        self.critic1 = Critic( **self.config['critic'] ).to(device)
-        self.critic2 = Critic( **self.config['critic'] ).to(device)
-        self.criOptimizer = optim.Adam( self.actor1.parameters(), lr=self.config['criticLR'] )
+        self.critic1 = Critic( **self.config['critic'] ).to(device) # short term
+        self.critic2 = Critic( **self.config['critic'] ).to(device) # long term
+        self.criOptimizer = optim.Adam( self.critic1.parameters(), lr=self.config['criticLR'] )
+        self.currLRCritic = self.config['criticLR']
 
         # Create some buffer for learning
         self.buffer = memory.ReplayBuffer(self.config['ReplayBuffer']['maxEpisodes'])
@@ -93,13 +97,57 @@ class Agent:
 
         return
 
+    def lrDecFunc(self):
+
+        self.currLRActor  *= self.lrDec
+        self.currLRCritic *= self.lrDec
+
+        for param_group in self.actOptimizer.param_groups:
+            param_group['lr'] = self.currLRActor
+
+        for param_group in self.criOptimizer.param_groups:
+            param_group['lr'] = self.currLRCritic
+
+        return
+
+
     def learn(self, nSamples, nEpSamples, nSteps):
 
+        gamma   = self.config['ReplayBuffer']['episodeGamma']
         samples = self.buffer.sample( nSamples, nEpSamples, nSteps)
+
         for s, a, r, ns, cumReward in samples:
-            print(f'Action: {a}, Reward: {r}, CumReward: {cumReward}')
+            #print(f'Action: {a}, Reward: {r}, CumReward: {cumReward}')
 
+            # ------------ Update the critics --------------------------
+            aNext = self.actActor2(ns)
+            qNext = self.actCritic2(ns, aNext)
+            qTarget = cumReward + qNext*gamma**(nSteps + 1)
 
+            state  = torch.from_numpy(s).float().to(device)
+            action = torch.from_numpy(a).float().to(device)
+            qTgt   = torch.from_numpy(np.array(qTarget)).float().to(device)
+            qExp   = self.critic1(state, action)
+
+            lossFn = F.mse_loss(qExp, qTgt)
+            self.criOptimizer.zero_grad()
+            lossFn.backward()
+            self.criOptimizer.step()
+
+            # ------------ Update the actors --------------------------
+            aNext = self.actor1(state)
+            loss  = - self.critic2(state, aNext)
+            self.actOptimizer.zero_grad()
+            loss.backward()
+            self.actOptimizer.step()
+
+            # ------------ Decrease LR --------------------------------
+            # self.lrDecFunc()
+
+        # Transfer the weights partly at the end of 20 updates 
+        # ----------------------------------------------------
+        self.transferWeights()
+            
         return
 
     def actActor1(self, state):
@@ -134,7 +182,7 @@ class Agent:
         with torch.no_grad():
             value = self.critic1(state, action).cpu().data.numpy()
         
-        return value
+        return value[0]
     
     def actCritic2(self, state, action):
 
@@ -146,12 +194,12 @@ class Agent:
         with torch.no_grad():
             value = self.critic2(state, action).cpu().data.numpy()
         
-        return value
+        return value[0]
 
-    def playEpisode(self, env, brainName):
+    def playEpisode(self, env, brainName, train_mode=True):
 
         # colllect 20 episodes
-        epi  = utils.collectEpisodes(env, brainName, self.actActor1, tMax=200, gamma=1, train_mode=True)
+        epi  = utils.collectEpisodes(env, brainName, self.actActor1, tMax=200, gamma=1, train_mode=train_mode)
         allVals = []
         for e in epi:
             vals = np.array([m[2] for m in e.memory]).sum()
