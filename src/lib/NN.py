@@ -86,18 +86,23 @@ class Agent:
     def updateBuffer(self, env, brainName):
 
         self.buffer = utils.updateReplayBuffer( 
-            self.buffer, env, brainName, self.actor2.forward,
+            self.buffer, env, brainName, self.actActor2,
             tMax      = self.config['ReplayBuffer']['episodeMaxT'], 
             gamma     = self.config['ReplayBuffer']['episodeGamma'],
             numDelete = self.config['ReplayBuffer']['episodeGamma'],)
 
         return
 
-    def learn(self):
+    def learn(self, nSamples, nEpSamples, nSteps):
+
+        samples = self.buffer.sample( nSamples, nEpSamples, nSteps)
+        for s, a, r, ns, cumReward in samples:
+            print(f'Action: {a}, Reward: {r}, CumReward: {cumReward}')
+
 
         return
 
-    def act(self, state):
+    def actActor1(self, state):
 
         # Take a state and convert that into an action ...
         # ------------------------------------------------
@@ -108,12 +113,53 @@ class Agent:
         
         return action
 
+    def actActor2(self, state):
+
+        # Take a state and convert that into an action ...
+        # ------------------------------------------------
+        state = torch.from_numpy(state).float().to(device)
+        self.actor2.eval()
+        with torch.no_grad():
+            action = self.actor2(state).cpu().data.numpy()
+        
+        return action
+
+    def actCritic1(self, state, action):
+
+        # Take a state and convert that into an action ...
+        # ------------------------------------------------
+        state  = torch.from_numpy(state).float().to(device)
+        action = torch.from_numpy(action).float().to(device)
+        self.critic1.eval()
+        with torch.no_grad():
+            value = self.critic1(state, action).cpu().data.numpy()
+        
+        return value
+    
+    def actCritic2(self, state, action):
+
+        # Take a state and convert that into an action ...
+        # ------------------------------------------------
+        state  = torch.from_numpy(state).float().to(device)
+        action = torch.from_numpy(action).float().to(device)
+        self.critic2.eval()
+        with torch.no_grad():
+            value = self.critic2(state, action).cpu().data.numpy()
+        
+        return value
+
     def playEpisode(self, env, brainName):
 
         # colllect 20 episodes
-        epi  = utils.collectEpisodes(env, brainName, self.act, tMax=200, gamma=1, train_mode=True)
-        
-        return epi
+        epi  = utils.collectEpisodes(env, brainName, self.actActor1, tMax=200, gamma=1, train_mode=True)
+        allVals = []
+        for e in epi:
+            vals = np.array([m[2] for m in e.memory]).sum()
+            allVals.append(vals)
+
+        allVals = np.array(allVals)
+
+        return allVals.mean(), allVals.max()
 
     def transferWeights(self, tau=0.1):
 

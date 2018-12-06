@@ -10,12 +10,13 @@ def main():
     brainName = env.brain_names[0]
 
     agent = NN.Agent()
-    # agent.updateBuffer(env, brainName)
-    ep = agent.playEpisode(env, brainName)
-    for e in ep:
-        print('-'*50)
-        vals = np.array([m[2] for m in e.memory])
-        print(vals.sum())
+    agent.updateBuffer(env, brainName)
+    agent.learn(10, 100, 5)
+
+    # This is for checking the current episode
+    result = agent.playEpisode(env, brainName)
+    print(result)
+    
 
     
     return

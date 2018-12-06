@@ -33,11 +33,14 @@ class Episode:
 
         return
 
-    def sample(self, nSamples=None):
+    def sample(self, nSamples=None, nSteps=None):
 
 
         if nSamples is None:
             nSamples = self.nSamples
+
+        if nSteps is None:
+            nSteps = self.nSteps
 
         retVals = np.random.choice( range(len(self.memory)), nSamples )
         results = []
@@ -51,17 +54,15 @@ class Episode:
 
             # This is the future reward and next state ...
             # --------------------------------------------
-            if self.nSteps == 1:
+            
+            if nSteps == 1:
                 ns         = self.memory[i].next_state
                 cum_reward = 0
             else:
-
                 try:
                     nr, ns     = zip(*self.memory[ i ].cumReward)
-                    nSteps = min(len( nr ), self.nSteps)
-                    cum_reward = 0
-                    for j in range(nSteps-1):
-                        cum_reward += nr[j]*self.gamma**j
+                    nSteps = min(len( nr ), nSteps)
+                    cum_reward = sum(nr[:nSteps])
                     ns = ns[ nSteps - 1 ]
                 except Exception as e:
                     print('Error: {}'.format(e))
@@ -105,10 +106,10 @@ class ReplayBuffer:
 
         return
 
-    def sample(self, nSamples, nEpSamples=None):
+    def sample(self, nSamples, nEpSamples=None, nSteps=None):
         results = []
         for episode in self.memory:
-            results += episode.sample(nEpSamples)
+            results += episode.sample(nEpSamples, nSteps)
 
         # Sampling depends upon the score ...
         episodeSum = np.array([r[2] for r in results]) + 1e-5
