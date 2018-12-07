@@ -110,7 +110,6 @@ class Agent:
 
         return
 
-
     def learn(self, nSamples, nEpSamples, nSteps):
 
         gamma   = self.config['ReplayBuffer']['episodeGamma']
