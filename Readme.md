@@ -55,7 +55,7 @@ Several different types of operations that you can do is described below:
 
 For training the model, just type `make run` in the `src` folder. You are welcome to play with the different opetions to see how the different optins affect the result. An example of the model performance is shown below. 
 
-![Learning](continuousControl/results/img/2018-12-07--00-32-1544113924.png?raw=true)
+![Learning](https://raw.githubusercontent.com/sankhaMukherjee/continuousControl/master/results/img/2018-12-07--00-32-1544113924.png)
 
 The orange line is one that is the max Q value from an episode, while the blue line is the average of the Q value of 20 robotes. As can be seen, more experimentation is needed to make this work.
 
